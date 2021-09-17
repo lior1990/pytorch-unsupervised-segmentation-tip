@@ -41,6 +41,8 @@ parser.add_argument('--stepsize_sim', metavar='SIM', default=1, type=float,
                     help='step size for similarity loss', required=False)
 parser.add_argument('--stepsize_con', metavar='CON', default=5, type=float, 
                     help='step size for continuity loss')
+parser.add_argument('--labels_start_index', default=0, type=int)
+
 args = parser.parse_args()
 
 # CNN model
@@ -86,7 +88,6 @@ loss_hpy = torch.nn.L1Loss(size_average = True)
 loss_hpz = torch.nn.L1Loss(size_average = True)
 
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
-label_colours = np.random.randint(255,size=(100,3))
 
 for batch_idx in range(args.maxIter):
     print('Training started. '+str(datetime.datetime.now())+'   '+str(batch_idx+1)+' / '+str(args.maxIter))
@@ -96,7 +97,7 @@ for batch_idx in range(args.maxIter):
             for batch_count in range(args.batch_size):
                 # load image
                 resized_im = cv2.imread(img_list[args.batch_size*im_file + batch_count])
-                resized_im = cv2.resize(resized_im, dsize=(224, 224))
+                resized_im = cv2.resize(resized_im, dsize=(256, 256))
                 resized_im = resized_im.transpose( (2, 0, 1) ).astype('float32')/255.
                 im.append(resized_im)
 
@@ -126,19 +127,52 @@ for batch_idx in range(args.maxIter):
             output = output.reshape( output.shape[0] * output.shape[1], -1 )
             ignore, target = torch.max( output, 1 )
 
+            im_target = target.data.cpu().numpy()
+            nLabels = len(np.unique(im_target))
+
             loss = args.stepsize_sim * loss_fn(output, target) + args.stepsize_con * (lhpy + lhpz)
             loss.backward()
             optimizer.step()
 
+            print(' label num :', nLabels, ' | loss :', loss.item())
+
+            if nLabels <= args.minLabels:
+                print("nLabels", nLabels, "reached minLabels", args.minLabels, ".")
+                break
+
     torch.save(model.state_dict(), os.path.join(args.input, 'b'+str(args.batch_size)+'_itr'+str(args.maxIter)+'_layer'+str(args.nConv+1)+'.pth'))
 
-label_colours = np.random.randint(255,size=(100,3))
 test_img_list = sorted(glob.glob(args.input+'/test/*'))
-if not os.path.exists(os.path.join(args.input, 'result/')):
-    os.mkdir(os.path.join(args.input, 'result/'))
+
+os.makedirs(os.path.join(args.input, 'result/'), exist_ok=True)
+os.makedirs(os.path.join(args.input, 'resized/'), exist_ok=True)
+
+
+def replace_indices(arr: "np.array") -> "np.array":
+    d = {}
+
+    new_arr = np.zeros_like(arr)
+    values = np.arange(args.nChannel) + 1 + args.labels_start_index
+    free_index = 0
+
+    for i, val in enumerate(arr):
+        if val not in d:
+            d[val] = values[free_index]
+            free_index += 1
+
+        new_arr[i] = d[val]
+
+    return new_arr
+
+
 print('Testing '+str(len(test_img_list))+' images.')
+
+global_flatten_inds = None
+
 for img_file in tqdm.tqdm(test_img_list):
     im = cv2.imread(img_file)
+    im = cv2.resize(im, dsize=(256, 256))
+
     data = torch.from_numpy( np.array([im.transpose( (2, 0, 1) ).astype('float32')/255.]) )
     if use_cuda:
         data = data.cuda()
@@ -146,7 +180,16 @@ for img_file in tqdm.tqdm(test_img_list):
     output = model( data )[ 0 ]
     output = output.permute( 1, 2, 0 ).contiguous().view( -1, args.nChannel )
     ignore, target = torch.max( output, 1 )
-    inds = target.data.cpu().numpy().reshape( (im.shape[0], im.shape[1]) )
-    inds_rgb = np.array([label_colours[ c % args.nChannel ] for c in inds])
-    inds_rgb = inds_rgb.reshape( im.shape ).astype( np.uint8 )
-    cv2.imwrite( os.path.join(args.input, 'result/') + os.path.basename(img_file), inds_rgb )
+    flatten_inds = target.data.cpu().numpy()
+
+    if global_flatten_inds is None:
+        unique_labels = np.unique(flatten_inds)
+        global_flatten_inds = unique_labels
+    else:
+        unique_labels = np.unique(flatten_inds)
+        assert (global_flatten_inds == unique_labels), f"{global_flatten_inds}, {unique_labels}"
+
+    inds = replace_indices(flatten_inds).reshape( (im.shape[0], im.shape[1]) ).astype( np.uint8 )
+    print(f"labels: {unique_labels}")
+    cv2.imwrite( os.path.join(args.input, 'result/') + os.path.basename(img_file), inds )
+    cv2.imwrite(os.path.join(args.input, 'resized/') + os.path.basename(img_file), im )

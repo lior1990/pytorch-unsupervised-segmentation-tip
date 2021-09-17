@@ -156,6 +156,5 @@ if not args.visualize:
     output = output.permute( 1, 2, 0 ).contiguous().view( -1, args.nChannel )
     ignore, target = torch.max( output, 1 )
     im_target = target.data.cpu().numpy()
-    im_target_rgb = np.array([label_colours[ c % args.nChannel ] for c in im_target])
-    im_target_rgb = im_target_rgb.reshape( im.shape ).astype( np.uint8 )
-cv2.imwrite( "output.png", im_target_rgb )
+    im_target = im_target.reshape( im.shape[0], im.shape[1] ).astype( np.uint8 )
+cv2.imwrite( "output.png", im_target )
