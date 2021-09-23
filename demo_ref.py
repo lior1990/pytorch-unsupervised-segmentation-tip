@@ -185,7 +185,7 @@ for img_file in tqdm.tqdm(test_img_list):
         global_flatten_inds = unique_labels
     else:
         unique_labels = np.unique(flatten_inds)
-        assert (global_flatten_inds == unique_labels).all(), f"{global_flatten_inds}, {unique_labels}"
+        assert np.array_equal(global_flatten_inds, unique_labels), f"{global_flatten_inds}, {unique_labels}"
 
     inds = replace_indices(flatten_inds).reshape( (im.shape[0], im.shape[1]) ).astype( np.uint8 )
     cv2.imwrite( os.path.join(args.input, 'result/') + os.path.basename(img_file), inds )
