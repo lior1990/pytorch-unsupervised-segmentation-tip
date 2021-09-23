@@ -150,7 +150,7 @@ def replace_indices(arr: "np.array") -> "np.array":
     d = {}
 
     new_arr = np.zeros_like(arr)
-    values = np.arange(args.nChannel) + 1 + args.labels_start_index
+    values = np.arange(args.nChannel) + args.labels_start_index
     free_index = 0
 
     for i, val in enumerate(arr):
@@ -188,6 +188,7 @@ for img_file in tqdm.tqdm(test_img_list):
         assert (global_flatten_inds == unique_labels).all(), f"{global_flatten_inds}, {unique_labels}"
 
     inds = replace_indices(flatten_inds).reshape( (im.shape[0], im.shape[1]) ).astype( np.uint8 )
-    print(f"labels: {np.unique(inds)}")
     cv2.imwrite( os.path.join(args.input, 'result/') + os.path.basename(img_file), inds )
     cv2.imwrite(os.path.join(args.input, 'resized/') + os.path.basename(img_file), im )
+
+print(f"labels: {np.unique(inds)}")
