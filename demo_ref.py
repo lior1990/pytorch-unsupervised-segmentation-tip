@@ -142,6 +142,7 @@ for batch_idx in range(args.maxIter):
 
 test_img_list = sorted(glob.glob(args.input+'/test/*'))
 
+os.makedirs(os.path.join(args.input, 'result_rgb/'), exist_ok=True)
 os.makedirs(os.path.join(args.input, 'result/'), exist_ok=True)
 os.makedirs(os.path.join(args.input, 'resized/'), exist_ok=True)
 
@@ -167,6 +168,8 @@ print('Testing '+str(len(test_img_list))+' images.')
 
 global_flatten_inds = None
 
+label_colours = np.random.randint(255,size=(100,3))
+
 for img_file in tqdm.tqdm(test_img_list):
     im = cv2.imread(img_file)
     im = cv2.resize(im, dsize=(256, 256))
@@ -188,7 +191,10 @@ for img_file in tqdm.tqdm(test_img_list):
         assert np.array_equal(global_flatten_inds, unique_labels), f"{global_flatten_inds}, {unique_labels}"
 
     inds = replace_indices(flatten_inds).reshape( (im.shape[0], im.shape[1]) ).astype( np.uint8 )
+    inds_rgb = np.array([label_colours[ c % args.nChannel ] for c in inds])
+    inds_rgb = inds_rgb.reshape( im.shape ).astype( np.uint8 )
     cv2.imwrite( os.path.join(args.input, 'result/') + os.path.basename(img_file), inds )
     cv2.imwrite(os.path.join(args.input, 'resized/') + os.path.basename(img_file), im )
+    cv2.imwrite(os.path.join(args.input, 'result_rgb/') + os.path.basename(img_file), inds_rgb)
 
 print(f"labels: {np.unique(inds)}")
