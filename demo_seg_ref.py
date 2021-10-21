@@ -106,6 +106,8 @@ label_colours = np.random.randint(255, size=(100, 3))
 ref_loss = torch.tensor(1)
 batch_idx = 0
 
+from tqdm import tqdm
+progress_bar = tqdm(range(1))
 
 while not np.isclose(ref_loss.item(), 0):
     # forwarding
@@ -132,7 +134,7 @@ while not np.isclose(ref_loss.item(), 0):
     loss.backward()
     optimizer.step()
 
-    print(batch_idx, '|', ' label num :', nLabels, ' | loss :', loss.item() , ' | ref loss :', ref_loss.item())
+    progress_bar.set_description(f"{batch_idx} '|' ' label num : {nLabels}  | loss :', {loss.item()} , ' | ref loss :', {ref_loss.item()}")
     batch_idx += 1
 
 
