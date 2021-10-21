@@ -134,8 +134,11 @@ while not np.isclose(ref_loss.item(), 0):
     loss.backward()
     optimizer.step()
 
-    progress_bar.set_description(f"{batch_idx} '|' ' label num : {nLabels}  | loss :', {loss.item()} , ' | ref loss :', {ref_loss.item()}")
+    progress_bar.set_description(f"{batch_idx} | label num : {nLabels}  | loss : {loss.item()} | ref loss {ref_loss.item()}")
     batch_idx += 1
+
+    if batch_idx > args.maxIter:
+        break
 
 
 label_colours = np.random.randint(255,size=(n_channel,3))
