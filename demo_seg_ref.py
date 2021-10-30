@@ -52,17 +52,24 @@ def pipeline(args, input_file, output_path):
 
     data = torch.from_numpy(np.array([im.transpose((2, 0, 1)).astype('float32') / 255.]))
     ref_data = torch.from_numpy(np.array([ref_im.transpose((2, 0, 1)).astype('float32') / 255.]))
+    ref_data_flipped = torch.fliplr(ref_data)
+
     n_channel = len(np.unique(ref_label))
     ref_label = torch.from_numpy(replace_indices(ref_label.flatten(), n_channel)).long()
+    ref_label_flipped = torch.fliplr(ref_label.view((im.shape[0], im.shape[1]))).flatten().long()
 
     if use_cuda:
         data = data.cuda()
         ref_data = ref_data.cuda()
         ref_label = ref_label.cuda()
+        ref_data_flipped = ref_data_flipped.cuda()
+        ref_label_flipped = ref_label_flipped.cuda()
 
     data = Variable(data)
     ref_data = Variable(ref_data)
+    ref_data_flipped = Variable(ref_data_flipped)
     ref_label = Variable(ref_label.squeeze(0))
+    ref_label_flipped = Variable(ref_label_flipped.squeeze(0))
 
     # train
     model = MyNet(data.size(1), n_channel, args)
@@ -94,9 +101,10 @@ def pipeline(args, input_file, output_path):
     while not np.isclose(ref_loss.item(), 0):
         # forwarding
         optimizer.zero_grad()
-        output, ref_output = model(torch.cat([data, ref_data]))
+        output, ref_output, ref_flipped_output = model(torch.cat([data, ref_data, ref_data_flipped]))
         output = output.permute(1, 2, 0).contiguous().view(-1, n_channel)
         ref_output = ref_output.permute(1,2,0).contiguous().view(-1, n_channel)
+        ref_flipped_output = ref_flipped_output.permute(1,2,0).contiguous().view(-1, n_channel)
 
         outputHP = output.reshape((im.shape[0], im.shape[1], n_channel))
         HPy = outputHP[1:, :, :] - outputHP[0:-1, :, :]
@@ -108,7 +116,7 @@ def pipeline(args, input_file, output_path):
         im_target = target.data.cpu().numpy()
         nLabels = len(np.unique(im_target))
 
-        ref_loss = loss_fn(ref_output, ref_label)
+        ref_loss = loss_fn(ref_output, ref_label) + loss_fn(ref_flipped_output, ref_label_flipped)
 
         # loss
         loss = args.stepsize_sim * loss_fn(output, target) + args.stepsize_con * (lhpy + lhpz) + ref_loss
