@@ -55,8 +55,9 @@ def pipeline(args, input_file, output_path):
     ref_data_flipped = torch.fliplr(ref_data)
 
     n_channel = len(np.unique(ref_label))
-    ref_label = torch.from_numpy(replace_indices(ref_label.flatten(), n_channel)).long()
-    ref_label_flipped = torch.fliplr(ref_label.view((im.shape[0], im.shape[1]))).flatten().long()
+    ref_label_np = replace_indices(ref_label.flatten(), n_channel)
+    ref_label = torch.from_numpy(ref_label_np).long()
+    ref_label_flipped = torch.from_numpy(np.fliplr(ref_label_np.reshape((im.shape[0], im.shape[1]))).copy()).flatten().long()
 
     if use_cuda:
         data = data.cuda()
