@@ -18,16 +18,16 @@ label_colours = None
 
 # CNN model
 class MyNet(nn.Module):
-    def __init__(self, input_dim, n_channel, args):
+    def __init__(self, input_dim, n_channel, args, hidden_n_channel=64):
         super(MyNet, self).__init__()
-        self.conv1 = nn.Conv2d(input_dim, n_channel, kernel_size=3, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(n_channel)
+        self.conv1 = nn.Conv2d(input_dim, hidden_n_channel, kernel_size=3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(hidden_n_channel)
         self.conv2 = nn.ModuleList()
         self.bn2 = nn.ModuleList()
         for i in range(args.nConv - 1):
-            self.conv2.append(nn.Conv2d(n_channel, n_channel, kernel_size=3, stride=1, padding=1))
-            self.bn2.append(nn.BatchNorm2d(n_channel))
-        self.conv3 = nn.Conv2d(n_channel, n_channel, kernel_size=1, stride=1, padding=0)
+            self.conv2.append(nn.Conv2d(hidden_n_channel, hidden_n_channel, kernel_size=3, stride=1, padding=1))
+            self.bn2.append(nn.BatchNorm2d(hidden_n_channel))
+        self.conv3 = nn.Conv2d(hidden_n_channel, n_channel, kernel_size=1, stride=1, padding=0)
         self.bn3 = nn.BatchNorm2d(n_channel)
         self.n_conv = args.nConv
 
