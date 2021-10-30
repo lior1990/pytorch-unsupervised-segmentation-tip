@@ -51,8 +51,9 @@ def pipeline(args, input_file, output_path):
     ref_label = cv2.imread(args.ref_input.replace(".jpg", ".png"), cv2.IMREAD_GRAYSCALE)
 
     data = torch.from_numpy(np.array([im.transpose((2, 0, 1)).astype('float32') / 255.]))
-    ref_data = torch.from_numpy(np.array([ref_im.transpose((2, 0, 1)).astype('float32') / 255.]))
-    ref_data_flipped = torch.fliplr(ref_data)
+    ref_data_np = np.array([ref_im.transpose((2, 0, 1)).astype('float32') / 255.])
+    ref_data = torch.from_numpy(ref_data_np)
+    ref_data_flipped = torch.from_numpy(np.fliplr(ref_data_np).copy())
 
     n_channel = len(np.unique(ref_label))
     ref_label_np = replace_indices(ref_label.flatten(), n_channel)
